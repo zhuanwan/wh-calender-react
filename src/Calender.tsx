@@ -298,7 +298,7 @@ function Calender(props: PropsT) {
       </div>
       <div className="week-box">
         {weekText.map((w) => (
-          <div key={w}>{w}</div>
+          <div key={w} className="week">{w}</div>
         ))}
       </div>
       <div
