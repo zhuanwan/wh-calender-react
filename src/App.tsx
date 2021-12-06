@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import './App.css'
 import Calender from './Calender'
-import type { DateT } from './Calender.d'
+import type { DateT } from '../types/index.d'
 
 function App() {
 
