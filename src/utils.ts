@@ -1,33 +1,39 @@
-export function _verifyDate(date: string) {
-  return new Date(date).getDate() === Number(date.substring(date.length - 2))
+export function _verifyDate(date: Date) {
+  return date instanceof Date
 }
 
 // 一个月多少天
 export function _daysInMonth(year: number, month: number) {
-  return new Date(year, month + 1, 0).getDate();
+  return new Date(year, month + 1, 0).getDate()
 }
 
 // 格式化
 export function _stringToDate(d: string) {
-  const date: any = d.split('-');
-  return new Date(date[0], date[1] - 1, date[2], 0, 0, 0);
+  const date: any = d.split('-')
+  return new Date(date[0], date[1] - 1, date[2], 0, 0, 0)
 }
 
 // date to string
-export function _dateToString(date: Date){
-  return date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate();
+export function _dateToString(date: Date) {
+  return date.getFullYear() + '-' + (date.getMonth() + 1) + '-' + date.getDate()
 }
 
 // 天转换为今天凌晨
-export function _timeToDate(date: Date){
-  date = new Date(date);
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0 ,0 ,0);
+export function _timeToDate(date: Date) {
+  date = new Date(date)
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0)
 }
 
 // 返回一个月41天（包含上月，当月，下月）
-export function getDateList(_year: number, _month: number, checkedDay: Date){
+export function getDateList(
+  _year: number,
+  _month: number,
+  checkedDay: Date,
+  isRange: boolean,
+  checkedRange: Array<Date | null>
+) {
   let list = []
-  const today = _timeToDate(new Date());
+  const today = _timeToDate(new Date())
   let date = new Date(_year, _month, 1, 0, 0, 0),
     totalDays = _daysInMonth(_year, _month),
     dates = date.getDate() - date.getDay(),
@@ -70,7 +76,16 @@ export function getDateList(_year: number, _month: number, checkedDay: Date){
       isLastDay: isLastDay,
       isInvalidDay: isInvalidDay,
       isLessThanToday: isLessThanToday,
-      active: +newDate - +checkedDay === 0,
+      active: !isRange && +newDate - +checkedDay === 0,
+      isStartDayChecked:
+        isRange && !!checkedRange[0] && +checkedRange[0] - +newDate === 0,
+      isEndDayChecked: !!checkedRange[1] && +checkedRange[1] - +newDate === 0,
+      range:
+        isRange &&
+        !!checkedRange[0] &&
+        !!checkedRange[1] &&
+        +newDate - +checkedRange[0] >= 0 &&
+        +checkedRange[1] - +newDate >= 0,
     }
     i++
     dates++
@@ -78,4 +93,3 @@ export function getDateList(_year: number, _month: number, checkedDay: Date){
   }
   return list
 }
-

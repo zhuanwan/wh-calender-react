@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import './Calender.less'
 import type { DateT, PropsT } from '../types/index.d'
+import classnames from 'classnames'
 import {
   getDateList,
   _dateToString,
@@ -13,11 +14,18 @@ const today = _timeToDate(new Date()) // 今天
 const slideDistance = 80 //滑动多少就翻页
 
 function Calender(props: PropsT) {
-  const { defaultCheckedDay, dayCheckedCb } = props
+  const {
+    defaultCheckedDate,
+    dayCheckedCb,
+    defaultCheckedRange,
+    rangeCheckedCb,
+    isRange = false,
+  } = props
   const [year, setYear] = useState(2021) // 年
   const [month, setMonth] = useState(2) // 月
   const [weekDay, setWeekDay] = useState<Date>(new Date()) // 日，滑动标识，以这天为基准渲染三月/三周
-  const [checkedDay, setCheckedDay] = useState<Date>(new Date()) // 选中的天
+  const [checkedDay, setCheckedDay] = useState<Date>(_timeToDate(new Date())) // 选中的天
+  const [checkedRange, setCheckedRange] = useState<Array<Date | null>>([]) // 选中的时间段
 
   // 日期二维数组，三月/三周
   const [listData, setListData] = useState<DateT[][]>([])
@@ -48,19 +56,28 @@ function Calender(props: PropsT) {
     setYear(y)
     setMonth(m)
     for (let i = 0; i < 3; i++) {
-      list[i] = getDateList(y, m - 2 + i, checkedDay)
+      list[i] = getDateList(y, m - 2 + i, checkedDay, isRange, checkedRange)
     }
     setListData(list)
     // 渲染完三个月后把中间的居中显示
     setTransitionDuration(0)
     setTranslateX(-calenderBoxWidth)
 
-    // 如果选中的日期和当前weekDay是同一月，赋值weekDay=checkedDay
-    if (
-      checkedDay.getFullYear() === weekDay.getFullYear() &&
-      checkedDay.getMonth() === weekDay.getMonth()
-    ) {
-      setWeekDay(checkedDay)
+    // 如果选中的日期/开始时间 和当前weekDay是同一月，赋值weekDay=checkedDay/weekDay=checkedRange[0]
+    if (isRange) {
+      if (
+        checkedRange[0]?.getFullYear() === weekDay.getFullYear() &&
+        checkedRange[0].getMonth() === weekDay.getMonth()
+      ) {
+        setWeekDay(checkedRange[0])
+      }
+    } else {
+      if (
+        checkedDay.getFullYear() === weekDay.getFullYear() &&
+        checkedDay.getMonth() === weekDay.getMonth()
+      ) {
+        setWeekDay(checkedDay)
+      }
     }
   }
 
@@ -95,7 +112,16 @@ function Calender(props: PropsT) {
           isInvalidDay:
             d.getFullYear() - _year != 0 || d.getMonth() + 1 - _month != 0,
           isLessThanToday: d < today,
-          active: +d - +checkedDay === 0,
+          active: !isRange && +d - +checkedDay === 0,
+          isStartDayChecked:
+            isRange && !!checkedRange[0] && +checkedRange[0] - +d === 0,
+          isEndDayChecked: !!checkedRange[1] && +checkedRange[1] - +d === 0,
+          range:
+            isRange &&
+            !!checkedRange[0] &&
+            !!checkedRange[1] &&
+            +d - +checkedRange[0] >= 0 &&
+            +checkedRange[1] - +d >= 0,
         }
       }
       list[j] = childList
@@ -228,24 +254,79 @@ function Calender(props: PropsT) {
     transitionendFn.current?.()
   }
 
+  // 清除当前页/上一页/下一页选定的开始结束时间，以及中间的时间段，
+  // 之所以上一页，下一页也清除是因为划过去的时候会开始会显示之前选中的时间，不好看
+  // 选中开始结束时间以及中间的时间段
+  const selectRange = (
+    startDate: Date | null,
+    endDate: Date | null,
+    list: DateT[][]
+  ) => {
+    const newList = [...list]
+    for (const listItem of newList) {
+      for (const item of listItem) {
+        item.range = false
+        item.isStartDayChecked = false
+        item.isEndDayChecked = false
+
+        if (startDate && +item.date - +startDate === 0) {
+          item.isStartDayChecked = true
+        }
+        if (endDate && +item.date - +endDate === 0) {
+          item.isEndDayChecked = true
+        }
+
+        if (
+          startDate &&
+          endDate &&
+          +item.date - +startDate >= 0 &&
+          +item.date - +endDate <= 0
+        ) {
+          item.range = true
+        }
+      }
+    }
+    return newList
+  }
+
   // 选中天
   const dayChecked = (item: DateT) => {
     if (item.isInvalidDay) {
       return
     }
 
-    listData.forEach((j) => {
-      j.forEach((v) => {
-        v.active = false
+    if (isRange) {
+      if (!checkedRange[0] && !checkedRange[1]) {
+        item.isStartDayChecked = true
+        checkedRange[0] = item.date
+      } else if (checkedRange[0] && !checkedRange[1]) {
+        if (+item.date - +checkedRange[0] <= 0) {
+          checkedRange[0] = item.date
+          item.isStartDayChecked = true
+        } else {
+          checkedRange[1] = item.date
+          item.isEndDayChecked = true
+        }
+      } else if (checkedRange[0] && checkedRange[1]) {
+        item.isStartDayChecked = true
+        checkedRange[0] = item.date
+        checkedRange[1] = null
+        
+      }
+      setListData(selectRange(checkedRange[0], checkedRange[1], listData))
+      rangeCheckedCb && rangeCheckedCb([checkedRange[0], checkedRange[1]])
+    } else {
+      listData.forEach((j) => {
+        j.forEach((v) => {
+          v.active = false
+        })
       })
-    })
-
-    item.active = true
-
-    setListData([...listData])
+      item.active = true
+      setCheckedDay(_timeToDate(new Date(item.date)))
+      dayCheckedCb && dayCheckedCb(item)
+      setListData([...listData])
+    }
     setWeekDay(new Date(item.date))
-    setCheckedDay(_timeToDate(new Date(item.date)))
-    dayCheckedCb && dayCheckedCb(item)
   }
 
   // 切换周/月
@@ -261,13 +342,28 @@ function Calender(props: PropsT) {
     const width = calenderBoxRef.current?.clientWidth || 0
     setCalenderBoxWidth(width)
 
-    // 如果传入了日期，那么按这个日期渲染月,否则用今天渲染月
-    if (defaultCheckedDay && _verifyDate(defaultCheckedDay)) {
-      setWeekDay(new Date(defaultCheckedDay))
-      setCheckedDay(_timeToDate(new Date(defaultCheckedDay)))
+    if (isRange) {
+      // 如果传入了日期时间段，那么按这个开始日期渲染月,否则用今天渲染月
+      if (
+        defaultCheckedRange &&
+        defaultCheckedRange[0] &&
+        defaultCheckedRange[1] &&
+        _verifyDate(defaultCheckedRange[0]) &&
+        _verifyDate(defaultCheckedRange[1]) &&
+        +defaultCheckedRange[0] - +defaultCheckedRange[1] < 0
+      ) {
+        setCheckedRange([
+          _timeToDate(defaultCheckedRange[0]),
+          _timeToDate(defaultCheckedRange[1]),
+        ])
+        setWeekDay(defaultCheckedRange[0])
+      }
     } else {
-      setWeekDay(new Date())
-      setCheckedDay(_timeToDate(new Date()))
+      // 如果传入了日期，那么按这个日期渲染月,否则用今天渲染月
+      if (defaultCheckedDate && _verifyDate(defaultCheckedDate)) {
+        setWeekDay(new Date(defaultCheckedDate))
+        setCheckedDay(_timeToDate(new Date(defaultCheckedDate)))
+      }
     }
     // 渲染三月/三周
     setTrggerDateRender(triggerDateRender + 1)
@@ -298,7 +394,9 @@ function Calender(props: PropsT) {
       </div>
       <div className="week-box">
         {weekText.map((w) => (
-          <div key={w} className="week">{w}</div>
+          <div key={w} className="week">
+            {w}
+          </div>
         ))}
       </div>
       <div
@@ -324,14 +422,24 @@ function Calender(props: PropsT) {
               {listItem.map((dayObj, j) => (
                 <span
                   key={j}
-                  className="date"
+                  className={classnames('date', {
+                    isInvalidDay: dayObj.isInvalidDay,
+                    active: dayObj.active,
+                    isStartDayChecked: dayObj.isStartDayChecked,
+                    isEndDayChecked: dayObj.isEndDayChecked,
+                    range: dayObj.range,
+                  })}
                   onClick={() => dayChecked(dayObj)}
                   data-date={dayObj.dataDayString}
                 >
                   <span
-                    className={`day ${
-                      dayObj.isInvalidDay ? 'isInvalidDay' : ''
-                    } ${dayObj.active ? 'active' : ''}`}
+                    className={classnames('day', {
+                      isInvalidDay: dayObj.isInvalidDay,
+                      active: dayObj.active,
+                      isStartDayChecked: dayObj.isStartDayChecked,
+                      isEndDayChecked: dayObj.isEndDayChecked,
+                      range: dayObj.range,
+                    })}
                   >
                     {dayObj.dates}
                   </span>

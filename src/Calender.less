@@ -95,14 +95,39 @@
       width: 100%;
       display: grid;
       grid-template-columns: repeat(7, 1fr);
+      grid-row-gap: 6px;
       font-size: 12px;
       .date {
-        height: @height;
+        // height: @height;
         display: flex;
         align-items: center;
         justify-content: center;
         -webkit-tap-highlight-color: transparent;
+        &.range {
+          position: relative;
+          &::after {
+            z-index: 1;
+            position: absolute;
+            content: '';
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #e5f3ff;
+          }
+          &.isStartDayChecked {
+            &::after {
+              left: 50%;
+            }
+          }
+          &.isEndDayChecked {
+            &::after {
+              width: 50%;
+            }
+          }
+        }
         .day {
+          z-index: 2;
           display: flex;
           justify-content: center;
           align-items: center;
@@ -114,9 +139,18 @@
             background-color: #fff;
             color: #ccc;
           }
-          &.active {
-            background-color: #3B83FF;
+          &.range {
+            background-color: #e5f3ff;
+          }
+          &.active,
+          &.isStartDayChecked,
+          &.isEndDayChecked {
+            background-color: #3b83ff;
             color: #fff;
+            &.range {
+              background-color: #3b83ff;
+              color: #fff;
+            }
           }
         }
       }
