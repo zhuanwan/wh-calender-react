@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import './Calender.less'
 import type { DateT, PropsT } from '../types/index.d'
-import classnames from 'classnames'
 import {
   getDateList,
   _dateToString,
@@ -311,7 +310,6 @@ function Calender(props: PropsT) {
         item.isStartDayChecked = true
         checkedRange[0] = item.date
         checkedRange[1] = null
-        
       }
       setListData(selectRange(checkedRange[0], checkedRange[1], listData))
       rangeCheckedCb && rangeCheckedCb([checkedRange[0], checkedRange[1]])
@@ -422,24 +420,26 @@ function Calender(props: PropsT) {
               {listItem.map((dayObj, j) => (
                 <span
                   key={j}
-                  className={classnames('date', {
-                    isInvalidDay: dayObj.isInvalidDay,
-                    active: dayObj.active,
-                    isStartDayChecked: dayObj.isStartDayChecked,
-                    isEndDayChecked: dayObj.isEndDayChecked,
-                    range: dayObj.range,
-                  })}
+                  className={`
+                    date 
+                    ${dayObj.isInvalidDay ? 'isInvalidDay' : ''} 
+                    ${dayObj.active ? 'active' : ''} 
+                    ${dayObj.isStartDayChecked ? 'isStartDayChecked' : ''} 
+                    ${dayObj.isEndDayChecked ? 'isEndDayChecked' : ''}
+                    ${dayObj.range ? 'range' : ''}
+                  `}
                   onClick={() => dayChecked(dayObj)}
                   data-date={dayObj.dataDayString}
                 >
                   <span
-                    className={classnames('day', {
-                      isInvalidDay: dayObj.isInvalidDay,
-                      active: dayObj.active,
-                      isStartDayChecked: dayObj.isStartDayChecked,
-                      isEndDayChecked: dayObj.isEndDayChecked,
-                      range: dayObj.range,
-                    })}
+                    className={`
+                      day 
+                      ${dayObj.isInvalidDay ? 'isInvalidDay' : ''} 
+                      ${dayObj.active ? 'active' : ''} 
+                      ${dayObj.isStartDayChecked ? 'isStartDayChecked' : ''} 
+                      ${dayObj.isEndDayChecked ? 'isEndDayChecked' : ''}
+                      ${dayObj.range ? 'range' : ''}
+                    `}
                   >
                     {dayObj.dates}
                   </span>
