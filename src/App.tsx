@@ -9,12 +9,12 @@ function App() {
   const [startDateString, setStartDateString] = useState('')
   const [endDateString, setEndDateString] = useState('')
   const dayCheckedCb = (item: DateT) => {
-    console.log('单选', item)
+    // console.log('单选', item)
     setDateString(item.dataDayString)
   }
 
   const rangeCheckedCb = (item: (Date | null)[]) => {
-    console.log('多选', item)
+    // console.log('多选', item)
     const [startDate, endDate] = item
     if (startDate) {
       setStartDateString(_dateToString(startDate))
@@ -26,8 +26,8 @@ function App() {
     } else {
       setEndDateString('')
     }
-    
   }
+
   return (
     <div className="App">
       <h3>单选</h3>
@@ -36,7 +36,8 @@ function App() {
         defaultCheckedDate={new Date('2022-02-02')}
       />
       <div>当前选择的日期：{dateString}</div>
-      <div style={{marginTop: 30}}></div>
+
+      <div style={{ marginTop: 30 }}></div>
       <h3>多选</h3>
 
       <Calender
@@ -44,7 +45,9 @@ function App() {
         rangeCheckedCb={rangeCheckedCb}
         defaultCheckedRange={[new Date('2022-02-09'), new Date('2022-02-25')]}
       />
-      <div>当前选择的日期：{startDateString}-{endDateString}</div>
+      <div>
+        当前选择的日期：{startDateString}-{endDateString}
+      </div>
     </div>
   )
 }

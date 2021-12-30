@@ -1,10 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './Calender.less'
 import type { DateT, PropsT } from '../types'
 import {
-  _classnames,
   getDateList,
-  inclinedAngle,
   _dateToString,
   _daysInMonth,
   _timeToDate,
@@ -12,7 +10,7 @@ import {
 } from './utils'
 const weekText = ['日', '一', '二', '三', '四', '五', '六']
 const today = _timeToDate(new Date()) // 今天
-const slideDistance = 40 //滑动多少就翻页
+const slideDistance = 80 //滑动多少就翻页
 
 function Calender(props: PropsT) {
   const {
@@ -33,12 +31,9 @@ function Calender(props: PropsT) {
 
   // calenderBox 滑动
   const [transitionDuration, setTransitionDuration] = useState(0)
-
   const [translateX, setTranslateX] = useState(0)
   const calenderBoxRef = useRef<HTMLDivElement>(null)
-  const calenderBoxInnerRef = useRef<HTMLDivElement>(null)
-
-  const calenderBoxWidthRef = useRef(0)
+  const [calenderBoxWidth, setCalenderBoxWidth] = useState(0)
 
   // 实现前后滑动，一次性要渲染三个月/周，中间那个月/周显示，然后左滑或者右滑之后立即加载滑动到的当月/周的数据，并重新渲染三个月/周
   const moveData = useRef({
@@ -47,9 +42,7 @@ function Calender(props: PropsT) {
     distanceX: 0,
     distanceY: 0,
   })
-
-  const isFirstMove = useRef(true) // 是否是第一次move，也就是touchSatart
-  const startMovingRef = useRef(false)
+  const [startMoving, setStartMoving] = useState(false)
   const transitionendFn = useRef<any>(null)
   const [isShowWeek, setIsShowWeek] = useState(false)
   const [triggerDateRender, setTrggerDateRender] = useState(0)
@@ -67,7 +60,7 @@ function Calender(props: PropsT) {
     setListData(list)
     // 渲染完三个月后把中间的居中显示
     setTransitionDuration(0)
-    setTranslateX(-calenderBoxWidthRef.current)
+    setTranslateX(-calenderBoxWidth)
 
     // 如果选中的日期/开始时间 和当前weekDay是同一月，赋值weekDay=checkedDay/weekDay=checkedRange[0]
     if (isRange) {
@@ -96,6 +89,7 @@ function Calender(props: PropsT) {
     const _day = weekDay.getDay()
     setYear(_year)
     setMonth(_month)
+
     for (let j = 0; j < 3; j++) {
       let childList = []
       for (let i = 0; i < 7; i++) {
@@ -134,7 +128,7 @@ function Calender(props: PropsT) {
     setListData(list)
     // 渲染完三个月后把中间的居中显示
     setTransitionDuration(0)
-    setTranslateX(-calenderBoxWidthRef.current)
+    setTranslateX(-calenderBoxWidth)
   }
 
   // 上一年
@@ -179,67 +173,53 @@ function Calender(props: PropsT) {
     setTrggerDateRender(triggerDateRender + 1)
   }
 
+  // 开始翻页(移动端)
+  const onTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation()
+    setStartMoving(true)
+    moveData.current = {
+      pageX: e.touches[0].pageX,
+      pageY: e.touches[0].pageY,
+      distanceX: 0,
+      distanceY: 0,
+    }
+  }
+
   // 开始翻页(pc端)
   const onMouseDown = (e: React.MouseEvent) => {
-    startMovingRef.current = true
+    e.stopPropagation()
+    setStartMoving(true)
     moveData.current = {
       pageX: e.clientX,
       pageY: e.clientY,
       distanceX: 0,
       distanceY: 0,
     }
-    // 这里绑定document事件，解决拖动到内容之外松不开问题
-    document.addEventListener('mousemove', onMouseMove, false)
-    document.addEventListener('mouseup', onMouseUp, false)
   }
 
   // 翻页中(移动端)
-  const onTouchMove = (e: TouchEvent) => {
-    setTransitionDuration(0)
-    const pageX = e.touches[0].pageX
-    const pageY = e.touches[0].pageY
-
-    if (isFirstMove.current) {
-      isFirstMove.current = false
-      moveData.current = {
-        pageX,
-        pageY,
-        distanceX: 0,
-        distanceY: 0,
-      }
-    } else {
-      const distanceX = pageX - moveData.current.pageX
-      const distanceY = pageY - moveData.current.pageY
-
-      const ang = inclinedAngle(
-        { x: moveData.current.pageX, y: moveData.current.pageY },
-        { x: pageX, y: pageY }
-      )
-
-      // 当角度是横向时，阻住页面滑动
-      if (
-        (ang > 0 && ang < 45) ||
-        (ang > 315 && ang < 360) ||
-        (ang > 135 && ang < 215)
-      ) {
-        e.preventDefault()
-      }
-
-      moveData.current = {
-        ...moveData.current,
-        distanceX,
-        distanceY,
-      }
-
-      setTranslateX(-calenderBoxWidthRef.current + distanceX)
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!startMoving) {
+      return
     }
+    e.stopPropagation()
+    const distanceX = e.touches[0].pageX - moveData.current.pageX
+    const distanceY = e.touches[0].pageY - moveData.current.pageY
+    moveData.current = {
+      ...moveData.current,
+      distanceX,
+      distanceY,
+    }
+    setTransitionDuration(0)
+    setTranslateX(translateX + distanceX / 90)
   }
 
   // 翻页中(pc端)
   const onMouseMove = (e: MouseEvent) => {
-    if (!startMovingRef.current) {
+    if (!startMoving) {
       return
     }
+    e.stopPropagation()
     const distanceX = e.clientX - moveData.current.pageX
     const distanceY = e.clientY - moveData.current.pageY
     moveData.current = {
@@ -248,42 +228,24 @@ function Calender(props: PropsT) {
       distanceY,
     }
     setTransitionDuration(0)
-    setTranslateX(-calenderBoxWidthRef.current + distanceX)
+    setTranslateX(translateX + distanceX / 90)
   }
 
-  // 结束翻页(移动端)
+  // 结束翻页(移动端/pc端)
   const onTouchEnd = () => {
-    isFirstMove.current = true
-    startMovingRef.current = false
+    setStartMoving(false)
+    setTransitionDuration(400)
+
     if (moveData.current.distanceX > slideDistance) {
-      console.log('向左')
-      transitionendFn.current = isShowWeek ? doLastWeek : doLastMonth
-      setTransitionDuration(400)
       setTranslateX(0)
+      transitionendFn.current = isShowWeek ? doLastWeek : doLastMonth
     } else if (moveData.current.distanceX < -slideDistance) {
-      console.log('向右')
+      setTranslateX(-calenderBoxWidth * 2)
       transitionendFn.current = isShowWeek ? doNextWeek : doNextMonth
-      setTransitionDuration(400)
-      setTranslateX(-calenderBoxWidthRef.current * 2)
     } else {
-      setTransitionDuration(0)
       transitionendFn.current = null
-      setTranslateX(-calenderBoxWidthRef.current)
+      setTranslateX(-calenderBoxWidth)
     }
-
-    moveData.current = {
-      pageX: 0,
-      pageY: 0,
-      distanceX: 0,
-      distanceY: 0,
-    }
-  }
-
-  // 结束翻页(pc端)
-  const onMouseUp = () => {
-    onTouchEnd()
-    document.removeEventListener('mousemove', onMouseMove, false)
-    document.removeEventListener('mouseup', onMouseUp, false)
   }
 
   // 滑动结束，开始翻页
@@ -354,19 +316,15 @@ function Calender(props: PropsT) {
     } else {
       listData.forEach((j) => {
         j.forEach((v) => {
-          if (v.dataDayString === item.dataDayString) {
-            v.active = true
-          } else {
-            v.active = false
-          }
+          v.active = false
         })
       })
-
-      setCheckedDay(_timeToDate(item.date))
-      setListData([...listData])
+      item.active = true
+      setCheckedDay(_timeToDate(new Date(item.date)))
       dayCheckedCb && dayCheckedCb(item)
+      setListData([...listData])
     }
-    setWeekDay(item.date)
+    setWeekDay(new Date(item.date))
   }
 
   // 切换周/月
@@ -377,10 +335,10 @@ function Calender(props: PropsT) {
   }
 
   // 初始化
-  useLayoutEffect(() => {
+  useEffect(() => {
     // 一开始设置calenderBox宽度,高度
     const width = calenderBoxRef.current?.clientWidth || 0
-    calenderBoxWidthRef.current = width
+    setCalenderBoxWidth(width)
 
     if (isRange) {
       // 如果传入了日期时间段，那么按这个开始日期渲染月,否则用今天渲染月
@@ -417,15 +375,9 @@ function Calender(props: PropsT) {
   }, [triggerDateRender])
 
   useEffect(() => {
-    // 因为要计算角度，横滑不影响页面上下滑动，需设置passive
-    calenderBoxInnerRef.current?.addEventListener('touchmove', onTouchMove, {
-      passive: false,
-    })
-
-    return () => {
-      calenderBoxInnerRef.current?.removeEventListener('touchmove', onTouchMove)
-    }
-  }, [])
+    if (startMoving) window.addEventListener('mousemove', onMouseMove)
+    return () => window.removeEventListener('mousemove', onMouseMove)
+  }, [startMoving])
 
   return (
     <div className="wh-calender">
@@ -450,44 +402,44 @@ function Calender(props: PropsT) {
         ref={calenderBoxRef}
       >
         <div
-          ref={calenderBoxInnerRef}
           className="calender-box-inner"
-          onTransitionEnd={onTransitionEnd}
+          onTouchStart={onTouchStart}
           onMouseDown={onMouseDown}
+          onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
+          onMouseUp={onTouchEnd}
+          onTransitionEnd={onTransitionEnd}
           style={{
-            width: calenderBoxWidthRef.current * 3,
+            width: calenderBoxWidth * 3,
             transform: 'translate3d(' + translateX + 'px, 0, 0)',
             transitionDuration: transitionDuration + 'ms',
           }}
         >
           {listData.map((listItem, i) => (
-            <div
-              className="item"
-              key={i}
-              style={{ width: calenderBoxWidthRef.current }}
-            >
+            <div className="item" key={i} style={{ width: calenderBoxWidth }}>
               {listItem.map((dayObj, j) => (
                 <span
-                  key={dayObj.dataDayString}
-                  className={_classnames('date', {
-                    isInvalidDay: dayObj.isInvalidDay,
-                    active: dayObj.active,
-                    isStartDayChecked: dayObj.isStartDayChecked,
-                    isEndDayChecked: dayObj.isEndDayChecked,
-                    range: dayObj.range,
-                  })}
+                  key={j}
+                  className={`
+                    date 
+                    ${dayObj.isInvalidDay ? 'isInvalidDay' : ''} 
+                    ${dayObj.active ? 'active' : ''} 
+                    ${dayObj.isStartDayChecked ? 'isStartDayChecked' : ''} 
+                    ${dayObj.isEndDayChecked ? 'isEndDayChecked' : ''}
+                    ${dayObj.range ? 'range' : ''}
+                  `}
                   onClick={() => dayChecked(dayObj)}
                   data-date={dayObj.dataDayString}
                 >
                   <span
-                    className={_classnames('day', {
-                      isInvalidDay: dayObj.isInvalidDay,
-                      active: dayObj.active,
-                      isStartDayChecked: dayObj.isStartDayChecked,
-                      isEndDayChecked: dayObj.isEndDayChecked,
-                      range: dayObj.range,
-                    })}
+                    className={`
+                      day 
+                      ${dayObj.isInvalidDay ? 'isInvalidDay' : ''} 
+                      ${dayObj.active ? 'active' : ''} 
+                      ${dayObj.isStartDayChecked ? 'isStartDayChecked' : ''} 
+                      ${dayObj.isEndDayChecked ? 'isEndDayChecked' : ''}
+                      ${dayObj.range ? 'range' : ''}
+                    `}
                   >
                     {dayObj.dates}
                   </span>

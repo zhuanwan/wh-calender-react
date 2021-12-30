@@ -28,7 +28,7 @@ export function _timeToDate(date: Date) {
 export function getDateList(
   _year: number,
   _month: number,
-  checkedDay: Date,
+  checkedDay: Date | null,
   isRange: boolean,
   checkedRange: Array<Date | null>
 ) {
@@ -76,7 +76,7 @@ export function getDateList(
       isLastDay: isLastDay,
       isInvalidDay: isInvalidDay,
       isLessThanToday: isLessThanToday,
-      active: !isRange && +newDate - +checkedDay === 0,
+      active: checkedDay ? !isRange && +newDate - +checkedDay === 0 : false,
       isStartDayChecked:
         isRange && !!checkedRange[0] && +checkedRange[0] - +newDate === 0,
       isEndDayChecked: !!checkedRange[1] && +checkedRange[1] - +newDate === 0,
@@ -92,4 +92,77 @@ export function getDateList(
     isIterateContinue = i <= 41
   }
   return list
+}
+
+/**
+ * @name 弧度转角度
+ * @param 弧度
+ */
+export function r2a(r: number): number {
+  return r * (180 / Math.PI)
+}
+
+type Doc = {
+  x: number
+  y: number
+}
+
+/**
+ * @name 计算两点形成的直线与水平线的夹角
+ * @param start 起始点
+ * @param end 结束点
+ * @returns 0-360
+ */
+export function inclinedAngle(start: Doc, end: Doc): number {
+  const diffX = end.x - start.x
+  const diffY = end.y - start.y
+
+  if (diffX > 0 && diffY === 0) {
+    return 0
+  }
+  if (diffX === 0 && diffY > 0) {
+    return 90
+  }
+  if (diffX < 0 && diffY === 0) {
+    return 180
+  }
+  if (diffX === 0 && diffY < 0) {
+    return 270
+  }
+
+  // 弧度转角度
+  const angle = r2a(Math.atan(diffY / diffX))
+
+  if ((diffX < 0 && diffY < 0) || (diffX < 0 && diffY > 0)) {
+    // 左上角 || 左下角
+    return angle + 180
+  } else if (diffX > 0 && diffY < 0) {
+    // 右上角
+    return angle + 360
+  }
+  // 右下角
+  return angle
+}
+
+export function supportTouch() {
+  return !!('ontouchstart' in window)
+}
+
+export function _classnames(
+  ...args: Array<string | { [key: string]: boolean }>
+) {
+  const arr = []
+  for (const item of args) {
+    if (Object.prototype.toString.call(item) === '[object String]') {
+      arr.push(item)
+    }
+    if (Object.prototype.toString.call(item) === '[object Object]') {
+      Object.keys(item).forEach((k) => {
+        if ((item as { [key: string]: boolean })[k]) {
+          arr.push(k)
+        }
+      })
+    }
+  }
+  return arr.join(' ')
 }
