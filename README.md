@@ -36,6 +36,7 @@ import 'wh-calender-react/lib/style.css'
 ![多选月](./src/assets/3.png)
 ![多选周](./src/assets/4.png)
 
-
+### 示例
+示例：https://codesandbox.io/s/calender-react-demo-lxpoi
 
 
